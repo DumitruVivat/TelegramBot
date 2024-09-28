@@ -18,7 +18,12 @@ public class TelegramBot extends TelegramLongPollingBot {
     private String botName;
     @Value("${bot.token}")
     private String botToken;
-    private UpdateController updateController;
+    private final UpdateController updateController;
+
+    public TelegramBot(UpdateController updateController) {
+        this.updateController = updateController;
+    }
+
     @PostConstruct
     public void init() {
         updateController.registerBot(this);
@@ -35,13 +40,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        var originalMessage = update.getMessage();
-        log.debug(originalMessage.getText());
-
-        var response = new SendMessage();
-        response.setChatId(originalMessage.getChatId().toString());
-        response.setText("Hello from bot");
-        sendAnswerMessage(response);
+         updateController.processUpdate(update);
     }
 
     public void sendAnswerMessage(SendMessage message){

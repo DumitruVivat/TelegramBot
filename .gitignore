@@ -11,8 +11,6 @@ target/
 *.iws
 *.iml
 .idea
-resources
-dispatcher/src/main/resources
 
 
 ### Eclipse ###
