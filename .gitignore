@@ -10,8 +10,7 @@ target/
 .idea/libraries/
 *.iws
 *.iml
-*.ipr
-.idea/
+.idea
 application.properties
 
 
