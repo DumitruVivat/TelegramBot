@@ -109,7 +109,9 @@ public class MainServiceImpl implements MainService {
     }
 
     private String help() {
-        return "Command list:\n"+"/cancel - cancel the command\n" +"/registration - registration the user\n";
+        return "Command list:\n"
+                +"/cancel - cancel the command;\n"
+                +"/registration - registration the user;\n";
     }
 
     private String cancelProcess(AppUser appUser) {
