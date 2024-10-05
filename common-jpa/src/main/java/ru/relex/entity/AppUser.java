@@ -11,6 +11,7 @@ import java.util.Objects;
 
 @Getter
 @Setter
+@EqualsAndHashCode(exclude = "id")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

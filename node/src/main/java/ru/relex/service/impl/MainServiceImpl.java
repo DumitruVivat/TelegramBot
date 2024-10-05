@@ -7,14 +7,19 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
 import ru.relex.dao.AppUserDAO;
 import ru.relex.dao.RawDatDAO;
+import ru.relex.entity.AppDocument;
+import ru.relex.entity.AppPhoto;
 import ru.relex.entity.AppUser;
 import ru.relex.entity.RawData;
+import ru.relex.exceptions.UploadFileException;
+import ru.relex.service.FileService;
 import ru.relex.service.MainService;
 import ru.relex.service.ProducerService;
+import ru.relex.service.enums.ServiceCommand;
 
 import static ru.relex.entity.enums.UserState.BASIC_STATE;
 import static ru.relex.entity.enums.UserState.WAIT_FOR_EMAIL_STATE;
-import static ru.relex.service.enums.ServiceCommands.*;
+import static ru.relex.service.enums.ServiceCommand.*;
 
 @Service
 @Log4j
@@ -22,10 +27,12 @@ public class MainServiceImpl implements MainService {
     private final RawDatDAO rawDatDAO;
     private final ProducerService producerService;
     private final AppUserDAO appUserDAO;
-    public MainServiceImpl(RawDatDAO rawDatDAO, ProducerService producerService, AppUserDAO appUserDAO) {
+    private final FileService fileService;
+    public MainServiceImpl(RawDatDAO rawDatDAO, ProducerService producerService, AppUserDAO appUserDAO, FileService fileService) {
         this.rawDatDAO = rawDatDAO;
         this.producerService = producerService;
         this.appUserDAO = appUserDAO;
+        this.fileService = fileService;
     }
     @Override
     public void processTextMessage(Update update) {
@@ -35,7 +42,8 @@ public class MainServiceImpl implements MainService {
         var text = update.getMessage().getText();
         var output = "";
 
-        if(CANCEL.equals(text)){
+        var serviceCommand = ServiceCommand.fromValue(text);
+        if(CANCEL.equals(serviceCommand)){
             output = cancelProcess(appUser);
         } else if (BASIC_STATE.equals(userState)) {
             output = processServiceCommand(appUser, text);
@@ -58,8 +66,17 @@ public class MainServiceImpl implements MainService {
         if (isNotAllowToSendContent(charId, appUser)){
             return;
         }
-        var answer = "Document was save with success, link to download http://test.md/get-doc/777";
-        sendAnswer(answer, charId);
+        try {
+            AppDocument doc = fileService.processDoc(update.getMessage());
+            //TODO
+            var answer = "Document was save with success," +
+                    " link to download http://test.md/get-doc/777";
+            sendAnswer(answer, charId);
+        } catch (UploadFileException ex){
+            log.error(ex);
+            String error = "You can't download the file, try later";
+            sendAnswer(error, charId);
+        }
     }
 
     private boolean isNotAllowToSendContent(Long charId, AppUser appUser) {
@@ -84,8 +101,15 @@ public class MainServiceImpl implements MainService {
         if (isNotAllowToSendContent(charId, appUser)){
             return;
         }
-        var answer = "Photo was save with success, link to download http://test.md/get-photo/777";
-        sendAnswer(answer, charId);
+        try{
+            AppPhoto photo = fileService.processPhoto(update.getMessage());
+            var answer = "Photo was save with success, link to download http://test.md/get-photo/777";
+            sendAnswer(answer, charId);
+        } catch (UploadFileException ex){
+            log.error(ex);
+            String error = "You can't download the photo, try later";
+            sendAnswer(error, charId);
+        }
     }
 
     private void sendAnswer(String output, Long chatId) {
@@ -96,12 +120,13 @@ public class MainServiceImpl implements MainService {
     }
 
     private String processServiceCommand(AppUser appUser, String cmd) {
-        if (REGISTRATION.equals(cmd)){
+        var serviceCommand = ServiceCommand.fromValue(cmd);
+        if (REGISTRATION.equals(serviceCommand)){
             //TODO
             return "temporary forbidden";
-        } else if (HELP.equals(cmd)) {
+        } else if (HELP.equals(serviceCommand)) {
             return help();
-        } else if (START.equals(cmd)) {
+        } else if (START.equals(serviceCommand)) {
             return "Hello! you can see the command list , input /help";
         } else {
             return "incorrect command, please input /help";
