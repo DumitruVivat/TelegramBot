@@ -15,6 +15,7 @@ import ru.relex.exceptions.UploadFileException;
 import ru.relex.service.FileService;
 import ru.relex.service.MainService;
 import ru.relex.service.ProducerService;
+import ru.relex.service.enums.LinkType;
 import ru.relex.service.enums.ServiceCommand;
 
 import static ru.relex.entity.enums.UserState.BASIC_STATE;
@@ -68,14 +69,47 @@ public class MainServiceImpl implements MainService {
         }
         try {
             AppDocument doc = fileService.processDoc(update.getMessage());
-            //TODO
+            String link = fileService.generateLink(doc.getId(), LinkType.GET_DOC);
             var answer = "Document was save with success," +
-                    " link to download http://test.md/get-doc/777";
+                    " link to download: " + link;
             sendAnswer(answer, charId);
         } catch (UploadFileException ex){
             log.error(ex);
             String error = "You can't download the file, try later";
             sendAnswer(error, charId);
+        }
+    }
+
+    @Override
+    public void processPhotoMessage(Update update) {
+        saveRawData(update);
+        var appUser = findOrSaveAppUser(update);
+        var charId = update.getMessage().getChatId();
+        if (isNotAllowToSendContent(charId, appUser)){
+            return;
+        }
+        try{
+            AppPhoto photo = fileService.processPhoto(update.getMessage());
+            String link = fileService.generateLink(photo.getId(), LinkType.GET_PHOTO);
+            var answer = "Photo was save with success, link to download: " + link;
+            sendAnswer(answer, charId);
+        } catch (UploadFileException ex){
+            log.error(ex);
+            String error = "You can't download the photo, try later";
+            sendAnswer(error, charId);
+        }
+    }
+    private String processServiceCommand(AppUser appUser, String cmd) {
+        var serviceCommand = ServiceCommand.fromValue(cmd);
+        if (REGISTRATION.equals(serviceCommand)){
+            //TODO
+            return "temporary forbidden";
+        } else if (HELP.equals(serviceCommand)) {
+            return help();
+        } else if (START.equals(serviceCommand)) {
+            return "Hello! you can see the command list , input /help";
+        } else {
+            return "incorrect command, please input /help";
         }
     }
 
@@ -93,44 +127,11 @@ public class MainServiceImpl implements MainService {
         return false;
     }
 
-    @Override
-    public void processPhotoMessage(Update update) {
-        saveRawData(update);
-        var appUser = findOrSaveAppUser(update);
-        var charId = update.getMessage().getChatId();
-        if (isNotAllowToSendContent(charId, appUser)){
-            return;
-        }
-        try{
-            AppPhoto photo = fileService.processPhoto(update.getMessage());
-            var answer = "Photo was save with success, link to download http://test.md/get-photo/777";
-            sendAnswer(answer, charId);
-        } catch (UploadFileException ex){
-            log.error(ex);
-            String error = "You can't download the photo, try later";
-            sendAnswer(error, charId);
-        }
-    }
-
     private void sendAnswer(String output, Long chatId) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(chatId);
         sendMessage.setText(output);
         producerService.produceAnswer(sendMessage);
-    }
-
-    private String processServiceCommand(AppUser appUser, String cmd) {
-        var serviceCommand = ServiceCommand.fromValue(cmd);
-        if (REGISTRATION.equals(serviceCommand)){
-            //TODO
-            return "temporary forbidden";
-        } else if (HELP.equals(serviceCommand)) {
-            return help();
-        } else if (START.equals(serviceCommand)) {
-            return "Hello! you can see the command list , input /help";
-        } else {
-            return "incorrect command, please input /help";
-        }
     }
 
     private String help() {
