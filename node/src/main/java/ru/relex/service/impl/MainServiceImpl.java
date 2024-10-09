@@ -109,7 +109,7 @@ public class MainServiceImpl implements MainService {
         } else if (HELP.equals(serviceCommand)) {
             return help();
         } else if (START.equals(serviceCommand)) {
-            return "Hello! you can see the command list , input /help";
+            return "Hello! To see the list of commands , type /help";
         } else {
             return "incorrect command, please input /help";
         }
@@ -118,11 +118,11 @@ public class MainServiceImpl implements MainService {
     private boolean isNotAllowToSendContent(Long charId, AppUser appUser) {
         var userState = appUser.getState();
         if(!appUser.getIsActive()) {
-            var error = "Register of activate the account";
+            var error = "Register or activate the account";
             sendAnswer(error, charId);
             return true;
         } else if (!BASIC_STATE.equals(userState)) {
-            var error = "Cancel the actual command with command /cancel";
+            var error = "To cancel the actual command, use command /cancel";
             sendAnswer(error, charId);
             return true;
         }
