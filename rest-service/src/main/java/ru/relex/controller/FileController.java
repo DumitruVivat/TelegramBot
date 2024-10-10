@@ -1,5 +1,6 @@
 package ru.relex.controller;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,18 +13,15 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 @Log4j
+@RequiredArgsConstructor
 @RequestMapping("/file")
 @RestController
 public class FileController {
-    private final FileService fileService;
 
-    public FileController(FileService fileService) {
-        this.fileService = fileService;
-    }
+    private final FileService fileService;
 
     @RequestMapping(method = RequestMethod.GET, value = "/get-doc")
     public void getDoc(@RequestParam("id") String id, HttpServletResponse response) {
-        //TODO
         var doc = fileService.getDocument(id);
         if(doc == null){
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -46,7 +44,6 @@ public class FileController {
 
     @RequestMapping(method = RequestMethod.GET, value = "/get-photo")
     public void getDocPhoto(@RequestParam("id") String id, HttpServletResponse response) {
-        //TODO
         var photo = fileService.getPhoto(id);
         if(photo == null){
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);

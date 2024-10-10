@@ -1,10 +1,10 @@
 package ru.relex.service.impl;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import ru.relex.dao.AppUserDAO;
 import ru.relex.dto.MailParams;
 import ru.relex.entity.AppUser;
@@ -16,18 +16,15 @@ import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 
 @Log4j
+@RequiredArgsConstructor
 @Service
 public class AppUserServiceImpl implements AppUserService {
 
     private final AppUserDAO appUserDAO;
     private final CryptoTool cryptoTool;
-    @Value("${service.mail.uri}")
-    private String mailServiceUri;
-
-    public AppUserServiceImpl(AppUserDAO appUserDAO, CryptoTool cryptoTool) {
-        this.appUserDAO = appUserDAO;
-        this.cryptoTool = cryptoTool;
-    }
+    @Value("${spring.rabbitmq.queues.registration-mail}")
+    private String registrationMailQueue;
+    private final RabbitTemplate rabbitTemplate;
 
     @Override
     public String registerUser(AppUser appUser) {
@@ -45,26 +42,19 @@ public class AppUserServiceImpl implements AppUserService {
     @Override
     public String setEmail(AppUser appUser, String email) {
         try {
-            InternetAddress emailAddress = new InternetAddress(email);
+            var emailAddress = new InternetAddress(email);
             emailAddress.validate();
         } catch (AddressException e) {
             return "Please enter a valid email address. To cancel the command, enter /cancel";
         }
-        var optional = appUserDAO.findByEmail(email);
-        if (optional.isEmpty()) {
+        var appUserOpt = appUserDAO.findByEmail(email);
+        if (appUserOpt.isEmpty()) {
             appUser.setEmail(email);
             appUser.setState(UserState.BASIC_STATE);
             appUser = appUserDAO.save(appUser);
 
             var cryptoUserId = cryptoTool.hashOf(appUser.getId());
-            var response = sendRequestToMailService(cryptoUserId, email);
-            if (response.getStatusCode() != HttpStatus.OK) {
-                var msg = String.format("Sending email to %s failed.", email);
-                log.error(msg);
-                appUser.setEmail(null);
-                appUserDAO.save(appUser);
-                return msg;
-            }
+            sendRegistrationEmail(cryptoUserId, email);
             return "An email has been sent to your email. " +
                     "Follow the link in the email to confirm your registration.";
         } else {
@@ -73,18 +63,11 @@ public class AppUserServiceImpl implements AppUserService {
         }
     }
 
-    private ResponseEntity<?> sendRequestToMailService(String cryptoUserId, String email) {
-        var restTemplate = new RestTemplate();
-        var headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+    private void sendRegistrationEmail(String cryptoUserId, String email) {
         var mailParams = MailParams.builder()
                 .id(cryptoUserId)
                 .emailTo(email)
                 .build();
-        var request = new HttpEntity<MailParams>(mailParams, headers);
-        return restTemplate.exchange(mailServiceUri,
-                HttpMethod.POST,
-                request,
-                String.class);
+        rabbitTemplate.convertAndSend(registrationMailQueue, mailParams);
     }
 }

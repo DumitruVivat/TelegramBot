@@ -12,12 +12,18 @@
 
     <artifactId>common-utils</artifactId>
 
+    <properties>
+        <maven.compiler.spource>17</maven.compiler.spource>
+        <maven.compiler.target>17</maven.compiler.target>
+        <hashids.version>1.0.1</hashids.version>
+    </properties>
+
     <dependencies>
 
         <dependency>
             <groupId>org.hashids</groupId>
             <artifactId>hashids</artifactId>
-            <version>1.0.1</version>
+            <version>${hashids.version}</version>
         </dependency>
 
     </dependencies>

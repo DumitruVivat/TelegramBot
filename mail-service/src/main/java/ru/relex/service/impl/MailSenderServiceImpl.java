@@ -1,5 +1,6 @@
 package ru.relex.service.impl;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -7,6 +8,7 @@ import org.springframework.stereotype.Service;
 import ru.relex.dto.MailParams;
 import ru.relex.service.MailSenderService;
 
+@RequiredArgsConstructor
 @Service
 public class MailSenderServiceImpl implements MailSenderService {
     private final JavaMailSender javaMailSender;
@@ -15,16 +17,14 @@ public class MailSenderServiceImpl implements MailSenderService {
     @Value("${service.activation.uri}")
     private String activationServiceUri;
 
-    public MailSenderServiceImpl(JavaMailSender javaMailSender) {
-        this.javaMailSender = javaMailSender;
-    }
+
     @Override
     public void send(MailParams mailParams) {
         var subject = "Account activation ";
         var messageBody = getActivationMailBody(mailParams.getId());
         var emailTo = mailParams.getEmailTo();
 
-        SimpleMailMessage mailMessage = new SimpleMailMessage();
+        var mailMessage = new SimpleMailMessage();
         mailMessage.setFrom(emailFrom);
         mailMessage.setTo(emailTo);
         mailMessage.setSubject(subject);

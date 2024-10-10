@@ -3,7 +3,7 @@ package ru.relex.service.enums;
 public enum ServiceCommand {
     HELP("/help"),
     REGISTRATION("/registration"),
-    CANCEL("/cancer"),
+    CANCEL("/cancel"),
     START("/start");
     private final String value;
     ServiceCommand(String value) {

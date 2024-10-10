@@ -1,5 +1,6 @@
 package ru.relex.controller;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -12,8 +13,9 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import javax.annotation.PostConstruct;
 
-@Component
 @Log4j
+@RequiredArgsConstructor
+@Component
 public class TelegramBot extends TelegramWebhookBot {
 
     @Value("${bot.name}")
@@ -22,12 +24,8 @@ public class TelegramBot extends TelegramWebhookBot {
     private String botToken;
     @Value("${bot.uri}")
     private String botUri;
+
     private final UpdateProcessor updateProcessor;
-
-    public TelegramBot(UpdateProcessor updateProcessor) {
-        this.updateProcessor = updateProcessor;
-    }
-
     @PostConstruct
     public void init() {
         updateProcessor.registerBot(this);
@@ -54,13 +52,13 @@ public class TelegramBot extends TelegramWebhookBot {
         return "/update";
     }
     public void sendAnswerMessage(SendMessage message){
-//        if (message != null){
-//            try{
-//                execute(message);
-//            } catch (TelegramApiException e){
-//                log.error(e);
-//            }
-//        }
+        if (message != null){
+            try{
+                execute(message);
+            } catch (TelegramApiException e){
+                log.error(e);
+            }
+        }
     }
     @Override
     public BotApiMethod<?> onWebhookUpdateReceived(Update update) {

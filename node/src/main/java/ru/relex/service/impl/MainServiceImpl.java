@@ -1,10 +1,11 @@
 package ru.relex.service.impl;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.User;
 import ru.relex.dao.AppUserDAO;
 import ru.relex.dao.RawDatDAO;
 import ru.relex.entity.AppDocument;
@@ -23,21 +24,18 @@ import static ru.relex.entity.enums.UserState.BASIC_STATE;
 import static ru.relex.entity.enums.UserState.WAIT_FOR_EMAIL_STATE;
 import static ru.relex.service.enums.ServiceCommand.*;
 
-@Service
+
 @Log4j
+@RequiredArgsConstructor
+@Service
 public class MainServiceImpl implements MainService {
     private final RawDatDAO rawDatDAO;
     private final ProducerService producerService;
     private final AppUserDAO appUserDAO;
     private final FileService fileService;
     private final AppUserService appUserService;
-    public MainServiceImpl(RawDatDAO rawDatDAO, ProducerService producerService, AppUserDAO appUserDAO, FileService fileService, AppUserService appUserService) {
-        this.rawDatDAO = rawDatDAO;
-        this.producerService = producerService;
-        this.appUserDAO = appUserDAO;
-        this.fileService = fileService;
-        this.appUserService = appUserService;
-    }
+
+    @Transactional
     @Override
     public void processTextMessage(Update update) {
         saveRawData(update);
@@ -102,18 +100,6 @@ public class MainServiceImpl implements MainService {
             sendAnswer(error, charId);
         }
     }
-    private String processServiceCommand(AppUser appUser, String cmd) {
-        var serviceCommand = ServiceCommand.fromValue(cmd);
-        if (REGISTRATION.equals(serviceCommand)){
-            return appUserService.registerUser(appUser);
-        } else if (HELP.equals(serviceCommand)) {
-            return help();
-        } else if (START.equals(serviceCommand)) {
-            return "Hello! To see the list of commands , type /help";
-        } else {
-            return "incorrect command, please input /help";
-        }
-    }
 
     private boolean isNotAllowToSendContent(Long charId, AppUser appUser) {
         var userState = appUser.getState();
@@ -130,10 +116,23 @@ public class MainServiceImpl implements MainService {
     }
 
     private void sendAnswer(String output, Long chatId) {
-        SendMessage sendMessage = new SendMessage();
+        var sendMessage = new SendMessage();
         sendMessage.setChatId(chatId);
         sendMessage.setText(output);
         producerService.produceAnswer(sendMessage);
+    }
+
+    private String processServiceCommand(AppUser appUser, String cmd) {
+        var serviceCommand = ServiceCommand.fromValue(cmd);
+        if (REGISTRATION.equals(serviceCommand)){
+            return appUserService.registerUser(appUser);
+        } else if (HELP.equals(serviceCommand)) {
+            return help();
+        } else if (START.equals(serviceCommand)) {
+            return "Hello! To see the list of commands , type /help";
+        } else {
+            return "incorrect command, please input /help";
+        }
     }
 
     private String help() {
@@ -149,9 +148,9 @@ public class MainServiceImpl implements MainService {
     }
 
     private AppUser findOrSaveAppUser(Update update){
-        User telegramUser = update.getMessage().getFrom();
-        var optional = appUserDAO.findByTelegramUserId(telegramUser.getId());
-        if (optional.isEmpty()) {
+        var telegramUser = update.getMessage().getFrom();
+        var appUserOpt = appUserDAO.findByTelegramUserId(telegramUser.getId());
+        if (appUserOpt.isEmpty()) {
             AppUser transientAppUser = AppUser.builder()
                     .telegramUserId(telegramUser.getId())
                     .username(telegramUser.getUserName())
@@ -162,11 +161,11 @@ public class MainServiceImpl implements MainService {
                     .build();
             return appUserDAO.save(transientAppUser);
         }
-        return optional.get();
+        return appUserOpt.get();
     }
 
     private void saveRawData(Update update) {
-        RawData rawData = RawData.builder()
+        var rawData = RawData.builder()
                 .event(update)
                 .build();
         rawDatDAO.save(rawData);
